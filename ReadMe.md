@@ -2,6 +2,8 @@
 
 A comprehensive Xbox 360 homebrew application that applies essential patches to enable unsigned code execution and remove various security restrictions to the BadUpdateExploit.
 
+![HexPatch UI](https://raw.githubusercontent.com/kryptik-dev/HexPatch/master/Media/Images/ui.png)
+
 ## ⚠️ Disclaimer
 
 This software is for educational and research purposes only. Use at your own risk. The authors are not responsible for any damage to your console or any legal issues that may arise from its use.
