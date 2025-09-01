@@ -59,7 +59,7 @@ This software is for educational and research purposes only. Use at your own ris
 - **DVD Key**: 16-character hexadecimal key for DVD drive authentication
 - **Console Type**: Motherboard model (e.g., Jasper, Trinity, Corona)
 
-## Source code will be provided onece refined
+## Source code will be provided once refined
 
 
 
