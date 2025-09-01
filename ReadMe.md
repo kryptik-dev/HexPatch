@@ -1,4 +1,4 @@
-# HEXPATCH - Xbox 360 Patching Tool For BadUpdateExploit
+# HexPatch - Xbox 360 Patching Tool For BadUpdateExploit
 
 A comprehensive Xbox 360 homebrew application that applies essential patches to enable unsigned code execution and remove various security restrictions to the BadUpdateExploit.
 
