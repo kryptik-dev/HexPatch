@@ -23,7 +23,7 @@ This software is for educational and research purposes only. Use at your own ris
 
 ## Installation
 
-1. Download the latest release from the [Releases](https://github.com/yourusername/hexpatch/releases) page
+1. Download the latest release from the [Releases](https://github.com/kryptik-dev/HexPatch/releases/tag/v1.1) page
 2. Add the default.xex to the BadUpdatePayload Folder on your USB.
 3. Run The Exploit
 
