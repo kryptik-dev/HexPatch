@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xex>
+  <format>
+    <compressed/>
+  </format>
+  <mediatypes>
+    <harddisk/>
+    <cd/>
+    <flash/>
+    <usbmass/>
+    <mu/>
+    <network/>
+    <ram/>
+    <svod/>
+    <allpackages/>
+  </mediatypes>
+  <gameregion system=""/>
+
+
+<!-- Match Dash TID and Version -->
+  <version major="2" minor="0" build="17559" qfe="0"/>
+  <titleid id ="0xFFFE07D1"/>
+
+<!-- Add some privileges for fun. Don't need them atm -->
+  <privilege id="0"/> <!-- No Force Reboot -->
+  <privilege id="6"/> <!-- Insecure Sockets -->
+
+<!-- Add our embedded resources -->
+  <section file="Media/font.xpr" name="FONT" memory="RO"/>
+  <section file="Media/launch-Hdd.xex" name="LXHDD" memory="RO"/>
+  <section file="Media/lhelper-Hdd.xex" name="LHHDD" memory="RO"/>
+  <section file="Media/launch-Mass0.xex" name="LXUSB" memory="RO"/>
+  <section file="Media/lhelper-Mass0.xex" name="LHUSB" memory="RO"/>
+</xex>
