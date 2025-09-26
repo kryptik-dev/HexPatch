@@ -94,8 +94,7 @@ VOID ToggleMessageBoxSetting()
         {
             // If enabled, clicking "Never Show Message Box Again" will disable it
             config = "DisableMessageBox=true\r\n";
-            ShowNotify(L"Message Box Will Never Show Again");
-            ShowNotify(L"Edit Or Delete The 'config.ini' File To Re-Enable");
+            ShowNotify(L"Message Box Will Not Show Again");
         }
         
         DWORD bytesWritten;
@@ -240,6 +239,9 @@ HRESULT HexPatch::Render()
 // Desc: Entry point to the program
 // Main patching process
 //--------------------------------------------------------------------------------------
+
+bool buttonFinished = false;
+
 VOID __cdecl main()
 {
     // Part 1 - We apply the HV patches here (if required)
@@ -347,10 +349,19 @@ VOID __cdecl main()
 
     // --------------------------------------------------------------
     // Name: SMBUI MAIN CLASS
-    // Desc: Shows the notification on exploitation success and the SMBUI if enabled
+    // Desc: Shows the notification on exploitation success and 
+    //       the SMBUI if enabled
     // --------------------------------------------------------------
 
-    ShowNotify(L"Exploit Successfull");
+
+    if (!IsMessageBoxDisabled())
+    {
+        ShowNotify(L"Exploit Successful");
+    }
+    else
+    {
+        ShowNotify(L"Exploit Successful: Press Y to show options");
+    }
 
     // If message box is enabled, show it immediately
     if (!IsMessageBoxDisabled())
@@ -361,8 +372,48 @@ VOID __cdecl main()
     }
     else
     {
-        // If message boxes are disabled, exit to dashboard
+        // If message boxes are disabled, give user a 5 second window to press Y to show the message box
         // User must manually edit config file to re-enable message boxes
+        DWORD startTime = GetTickCount();
+        DWORD elapsedTime = 0;
+        const DWORD waitTime = 5000; // 5 seconds in milliseconds
+        
+        while (elapsedTime < waitTime)
+        {
+            // Check for gamepad input
+            XINPUT_STATE inputState;
+            if (XInputGetState(0, &inputState) == ERROR_SUCCESS)
+            {
+                short button = inputState.Gamepad.wButtons;
+
+                if (button != 0)
+                {
+                    // Check if Y button is pressed (XINPUT_GAMEPAD_Y = 0x0020)
+                    if (button & XINPUT_GAMEPAD_Y)
+                    {
+                        // Y button pressed, show the message box
+                        wsprintfW(dialog_text_buffer, L"DO NOT SIGN IN TO THE \"BadAvatar\" PROFILE\n\nConsole Information:\n\n%s\n%s\n%s", 
+                               wConTypeBuf, wCPUKeyBuf, wDVDKeyBuf);
+                        MessageBoxWithOptions(dialog_text_buffer);
+                        break; // Exit the loop and continue normal flow
+                    }
+
+                    buttonFinished = true;
+                }
+                else if (buttonFinished)
+                {
+                    buttonFinished = false;
+                }
+            }
+            
+            // Update elapsed time
+            elapsedTime = GetTickCount() - startTime;
+            
+            // Small delay to prevent excessive CPU usage
+            Sleep(50);
+        }
+        
+        // If we reached here without showing the message box, exit to dashboard
         XLaunchNewImage(XLAUNCH_KEYWORD_DEFAULT_APP, 0);
     }
 }

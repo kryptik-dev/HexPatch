@@ -15,7 +15,7 @@ _**Note: this disables UI permanently, unless the 'config.ini' file is deleted o
 <summary>Installation Instructions</summary>
 
 1. Download the latest release from the [Releases](https://github.com/kryptik-dev/HexPatch/releases) page.
-2. Extract the contents of the zip file to your `Xbox 360`'s `Drive` ROOT.
+2. Extract the contents of the zip file to the root of your `Drive`, where the _BadUpdatePayload_ folder is located.
 3. Load up your `Xbox 360` and wait for ABadAvatar to do it's magic.
 
 </details>
