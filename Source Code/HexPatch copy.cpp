@@ -1,7 +1,7 @@
 //--------------------------------------------------------------------------------------
 // Based of XeUnshackle By Bryrom90
 // Authors of HexPatch: Kryptal & Kryptik-Dev
-// Contributors: Dread
+// Contributors: Safauri
 //--------------------------------------------------------------------------------------
 
 // Software description:
@@ -24,7 +24,6 @@ MESSAGEBOX_RESULT result;
 XOVERLAPPED overlapped;
 
 BOOL bShouldPlaySuccessVid = FALSE;
-BOOL bVideoWasPlayed = FALSE; // Track if video was actually played
 
 //--------------------------------------------------------------------------------------
 // Name: Config File Initialization
@@ -36,7 +35,7 @@ VOID CreateDefaultConfigFile()
     HANDLE hFile = CreateFile("GAME:\\config.ini", GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile != INVALID_HANDLE_VALUE)
     {
-        const char* config = "DisableSuccessVideo=false\r\nVideoPath=\r\n";
+        const char* config = "DisableMessageBox=false\r\nDisableSuccessVideo=false\r\nVideoPath=GAME:\\video\\video.wmv\r\n";
         DWORD bytesWritten;
         WriteFile(hFile, config, (DWORD)strlen(config), &bytesWritten, NULL);
         CloseHandle(hFile);
@@ -111,17 +110,19 @@ BOOL IsSuccessVideoDisabled()
 // Desc: Get the video path from config, or return default
 //--------------------------------------------------------------------------------------
 
-BOOL GetCustomVideoPath(CHAR* path, DWORD pathSize)
+VOID GetVideoPath(CHAR* path, DWORD pathSize)
 {
     HANDLE hFile = CreateFile("GAME:\\config.ini", GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE)
     {
-        return FALSE; // No config file
+        // Return default path
+        strncpy_s(path, pathSize, "GAME:\\video\\video.wmv", pathSize - 1);
+        path[pathSize - 1] = '\0';
+        return;
     }
     
     char buffer[512];
     DWORD bytesRead;
-    BOOL hasCustomPath = FALSE;
     
     if (ReadFile(hFile, buffer, sizeof(buffer) - 1, &bytesRead, NULL))
     {
@@ -138,133 +139,59 @@ BOOL GetCustomVideoPath(CHAR* path, DWORD pathSize)
             if (videoPathEnd == NULL)
                 videoPathEnd = buffer + bytesRead;
                 
-            // Check if there's actually a path specified (not just empty)
-            if (videoPathEnd > videoPathStart)
+            DWORD length = min((DWORD)(videoPathEnd - videoPathStart), pathSize - 1);
+            strncpy_s(path, pathSize, videoPathStart, length);
+            path[length] = '\0';
+            
+            // Remove any trailing whitespace
+            while (length > 0 && (path[length - 1] == ' ' || path[length - 1] == '\t'))
             {
-                DWORD length = min((DWORD)(videoPathEnd - videoPathStart), pathSize - 1);
-                if (length > 0)
-                {
-                    // Remove any trailing whitespace
-                    while (length > 0 && (videoPathStart[length - 1] == ' ' || videoPathStart[length - 1] == '\t'))
-                    {
-                        length--;
-                    }
-                    
-                    if (length > 0)
-                    {
-                        // Handle different path formats and ensure it's in the GAME directory
-                        if (strncmp(videoPathStart, "GAME:\\", 6) == 0 || strncmp(videoPathStart, "game:\\", 6) == 0)
-                        {
-                            // Path already includes GAME:\ prefix
-                            strncpy_s(path, pathSize, videoPathStart, length);
-                            path[length] = '\0';
-                            hasCustomPath = TRUE;
-                        }
-                        else if (videoPathStart[0] == '/' || videoPathStart[0] == '\\')
-                        {
-                            // Path starts with / or \, prepend GAME:
-                            DWORD gamePrefixLen = 5; // "GAME:"
-                            if (length + gamePrefixLen < pathSize)
-                            {
-                                strcpy_s(path, pathSize, "GAME:");
-                                strncat_s(path, pathSize, videoPathStart, length);
-                                hasCustomPath = TRUE;
-                            }
-                        }
-                        else if (strncmp(videoPathStart, "./", 2) == 0 || strncmp(videoPathStart, ".\\", 2) == 0)
-                        {
-                            // Path starts with ./ or .\, prepend GAME:
-                            DWORD prefixLen = 6; // "GAME:\\"
-                            if (length + prefixLen - 1 < pathSize) // -1 because we skip the dot slash
-                            {
-                                strcpy_s(path, pathSize, "GAME:\\");
-                                strncat_s(path, pathSize, videoPathStart + 2, length - 2); // Skip the ./
-                                hasCustomPath = TRUE;
-                            }
-                        }
-                        else
-                        {
-                            // Path is relative, prepend GAME:
-                            DWORD prefixLen = 6; // "GAME:\\"
-                            if (length + prefixLen < pathSize)
-                            {
-                                strcpy_s(path, pathSize, "GAME:\\");
-                                strncat_s(path, pathSize, videoPathStart, length);
-                                hasCustomPath = TRUE;
-                            }
-                        }
-                    }
-                }
+                path[--length] = '\0';
             }
+            
+            CloseHandle(hFile);
+            return;
         }
     }
     
     CloseHandle(hFile);
-    return hasCustomPath;
+    
+    // Return default path
+    strncpy_s(path, pathSize, "GAME:\\video\\video.wmv", pathSize - 1);
+    path[pathSize - 1] = '\0';
 }
 
 //--------------------------------------------------------------------------------------
-// Name: Toggle MessageBox Setting
+// Name: Toggle Message Box Setting
 // Desc: Toggles the message box setting through the UI.    
 //--------------------------------------------------------------------------------------
 
 VOID ToggleMessageBoxSetting()
 {
-    // This function is no longer needed since we always show the message box when Y is pressed
-}
-
-//--------------------------------------------------------------------------------------
-// Name: ToggleSuccessVideoSetting (patched)
-// Desc: Updates only DisableSuccessVideo while preserving other config keys
-//--------------------------------------------------------------------------------------
-VOID ToggleSuccessVideoSetting()
-{
-    BOOL currentlyDisabled = IsSuccessVideoDisabled();
-
-    // Read existing config file
-    char buffer[512] = {0};
-    DWORD bytesRead = 0;
-    HANDLE hFile = CreateFile("GAME:\\config.ini", GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    BOOL currentlyDisabled = IsMessageBoxDisabled();
+    
+    HANDLE hFile = CreateFile("GAME:\\config.ini", GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile != INVALID_HANDLE_VALUE)
     {
-        ReadFile(hFile, buffer, sizeof(buffer) - 1, &bytesRead, NULL);
-        buffer[bytesRead] = '\0';
-        CloseHandle(hFile);
-    }
-
-    std::string config(buffer);
-
-    // Update or insert DisableSuccessVideo setting
-    size_t pos = config.find("DisableSuccessVideo=");
-    if (pos != std::string::npos)
-    {
-        // Replace existing line
-        size_t end = config.find_first_of("\r\n", pos);
-        if (end == std::string::npos) end = config.length();
-        config.replace(pos, end - pos, currentlyDisabled ? "DisableSuccessVideo=false" : "DisableSuccessVideo=true");
-    }
-    else
-    {
-        // Add it at the end if missing
-        config += (currentlyDisabled ? "\r\nDisableSuccessVideo=false" : "\r\nDisableSuccessVideo=true");
-    }
-
-    // Rewrite config file with updated content
-    hFile = CreateFile("GAME:\\config.ini", GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile != INVALID_HANDLE_VALUE)
-    {
+        const char* config;
+        if (currentlyDisabled)
+        {
+            // If disabled, clicking "Show Message Box" will enable it
+            config = "DisableMessageBox=false\r\n";
+            ShowNotify(L"Message Box Will Now Show");
+        }
+        else
+        {
+            // If enabled, clicking "Never Show Message Box Again" will disable it
+            config = "DisableMessageBox=true\r\n";
+            ShowNotify(L"Message Box Will Not Show Again");
+        }
+        
         DWORD bytesWritten;
-        WriteFile(hFile, config.c_str(), (DWORD)config.size(), &bytesWritten, NULL);
+        WriteFile(hFile, config, (DWORD)strlen(config), &bytesWritten, NULL);
         CloseHandle(hFile);
     }
-
-    // Show notify message
-    if (currentlyDisabled)
-        ShowNotify(L"Success Video Enabled");
-    else
-        ShowNotify(L"Success Video Disabled");
 }
-
 
 
 //--------------------------------------------------------------------------------------
@@ -298,10 +225,6 @@ void ResetD3DStateForMessageBox()
 //       save console info, and toggle message box setting.    
 //--------------------------------------------------------------------------------------
 
-BOOL g_bMessageBoxActive = FALSE;
-XOVERLAPPED g_messageBoxOverlapped;
-MESSAGEBOX_RESULT g_messageBoxResult;
-
 void MessageBoxWithOptions(LPCWSTR message)
 {
     cprintf("[HexPatch] Entering MessageBoxWithOptions\n");
@@ -315,8 +238,8 @@ void MessageBoxWithOptions(LPCWSTR message)
         // Reset D3D state before showing message box to ensure clean state
         ResetD3DStateForMessageBox();
         
-        // Dynamic button text based on current setting for the success video toggle
-        LPCWSTR thirdButtonText = IsSuccessVideoDisabled() ? L"Enable Success Video" : L"Disable Success Video";
+        // Dynamic button text based on current setting for the message box toggle
+        LPCWSTR thirdButtonText = IsMessageBoxDisabled() ? L"Show Message Box" : L"Never Show Message Box Again";
         LPCWSTR multiButtons[3] = { L"Return to Dashboard", L"Save Console Info", thirdButtonText };
         MESSAGEBOX_RESULT multiResult;
         XOVERLAPPED multiOverlapped;
@@ -346,16 +269,14 @@ void MessageBoxWithOptions(LPCWSTR message)
                         cprintf("[HexPatch] User selected Save Console Info\n");
                         SaveConsoleDataToFile();
                         break; // Continue loop to show message box again
-                    case 2: // Toggle Success Video Setting
-                        cprintf("[HexPatch] User selected Toggle Success Video Setting\n");
-                        ToggleSuccessVideoSetting();
-                        // Update button text immediately for next loop
-                        thirdButtonText = IsSuccessVideoDisabled() ? L"Enable Success Video" : L"Disable Success Video";
+                    case 2: // Toggle Message Box Setting
+                        cprintf("[HexPatch] User selected Toggle Message Box Setting\n");
+                        ToggleMessageBoxSetting();
                         break; // Continue loop to show message box again
                     default:
                         cprintf("[HexPatch] User selected unknown option, returning to dashboard\n");
                         XLaunchNewImage(XLAUNCH_KEYWORD_DEFAULT_APP, 0);
-                        return; // Exit function
+                        break;
                 }
             }
             else
@@ -391,6 +312,8 @@ void MessageBoxWithOptions(LPCWSTR message)
         }
     }
 }
+
+
 
 // Get global access to the main D3D device
 // extern D3DDevice* g_pd3dDevice; // This is already available through ATG::Application
@@ -432,22 +355,14 @@ class HexPatch : public ATG::Application
     
     // Flag to track when video has finished and message box should be shown
     BOOL m_bShowMessageBox;
-    
-    // Flag to track when message box is open
-    BOOL m_bMessageBoxOpen;
-    
-    // Overlapped structure for non-blocking message box
-    XOVERLAPPED m_messageBoxOverlapped;
-    
-    // Result structure for message box
-    MESSAGEBOX_RESULT m_messageBoxResult;
 
 public:
     // Destructor to clean up resources
     ~HexPatch() {}
     
+    // We'll remove our custom Run method and use the base class implementation
     // Override the Run method to handle video completion
-    VOID Run();
+    // VOID Run();
 
 private:
     virtual HRESULT Initialize();
@@ -490,11 +405,6 @@ HRESULT HexPatch::Initialize()
     m_bFailed = FALSE;
     m_bFinalFailed = FALSE;
     m_bShowMessageBox = FALSE;
-    m_bMessageBoxOpen = FALSE;
-    
-    // Initialize overlapped structure
-    ZeroMemory(&m_messageBoxOverlapped, sizeof(m_messageBoxOverlapped));
-    ZeroMemory(&m_messageBoxResult, sizeof(m_messageBoxResult));
 
     return S_OK;
 }
@@ -518,130 +428,12 @@ HRESULT HexPatch::Update()
         return S_OK; // Continue running the loop
     }
 
-    // Check if message box operation has completed (for Y button during video playback)
-    if (m_bMessageBoxOpen && g_bMessageBoxActive && XHasOverlappedIoCompleted(&g_messageBoxOverlapped))
-    {
-        // Get the result
-        if (XGetOverlappedResult(&g_messageBoxOverlapped, NULL, TRUE) == ERROR_SUCCESS)
-        {
-            // Handle message box result
-            switch (g_messageBoxResult.dwButtonPressed)
-            {
-                case 0: // Return to Dashboard
-                    cprintf("[HexPatch] User selected Return to Dashboard\n");
-                    XLaunchNewImage(XLAUNCH_KEYWORD_DEFAULT_APP, 0);
-                    break;
-                case 1: // Save Console Info
-                    cprintf("[HexPatch] User selected Save Console Info\n");
-                    SaveConsoleDataToFile();
-                    // Re-show the message box by resetting the state to allow another show
-                    g_bMessageBoxActive = FALSE;
-                    ZeroMemory(&g_messageBoxOverlapped, sizeof(g_messageBoxOverlapped));
-                    // Keep m_bMessageBoxOpen as TRUE to maintain the black background
-                    break;
-                case 2: // Toggle Success Video Setting
-                    cprintf("[HexPatch] User selected Toggle Success Video Setting\n");
-                    ToggleSuccessVideoSetting();
-                    // Re-show the message box by resetting the state to allow another show
-                    g_bMessageBoxActive = FALSE;
-                    ZeroMemory(&g_messageBoxOverlapped, sizeof(g_messageBoxOverlapped));
-                    // Keep m_bMessageBoxOpen as TRUE to maintain the black background
-                    break;
-                default:
-                    // For any other case, re-show the message box
-                    g_bMessageBoxActive = FALSE;
-                    ZeroMemory(&g_messageBoxOverlapped, sizeof(g_messageBoxOverlapped));
-                    // Keep m_bMessageBoxOpen as TRUE to maintain the black background
-                    break;
-            }
-        }
-        else
-        {
-            // If there was an error, re-show the message box
-            g_bMessageBoxActive = FALSE;
-            ZeroMemory(&g_messageBoxOverlapped, sizeof(g_messageBoxOverlapped));
-            // Keep m_bMessageBoxOpen as TRUE to maintain the black background
-        }
-    }
-
-    // If message box is open but not active, show it again with 3 buttons
-    if (m_bMessageBoxOpen && !g_bMessageBoxActive)
-    {
-        // Prepare message box text with console information
-        WCHAR dialog_text_buffer[512];
-        wsprintfW(dialog_text_buffer, L"Exploit Successful\n\nConsole Information:\n\n%s\n%s\n%s", 
-               wConTypeBuf, wCPUKeyBuf, wDVDKeyBuf);
-        
-        // Reset overlapped structure
-        ZeroMemory(&g_messageBoxOverlapped, sizeof(g_messageBoxOverlapped));
-        ZeroMemory(&g_messageBoxResult, sizeof(g_messageBoxResult));
-        
-        // Set the active flag
-        g_bMessageBoxActive = TRUE;
-        
-        // Show message box with 3 buttons
-        LPCWSTR thirdButtonText = IsSuccessVideoDisabled() ? L"Enable Success Video" : L"Disable Success Video";
-        LPCWSTR buttons[3] = { L"Return to Dashboard", L"Save Console Info", thirdButtonText };
-        HRESULT hr = XShowMessageBoxUI(0, L"HexPatch - Beta", dialog_text_buffer, 3, buttons, 0, XMB_WARNINGICON, &g_messageBoxResult, &g_messageBoxOverlapped);
-        if (hr == ERROR_IO_PENDING)
-        {
-            cprintf("[HexPatch] Message box shown asynchronously\n");
-        }
-        else
-        {
-            cprintf("[HexPatch] Failed to show message box: %#X\n", hr);
-            g_bMessageBoxActive = FALSE;
-            // Keep m_bMessageBoxOpen as TRUE to maintain the black background
-        }
-    }
-
     if (m_xmvPlayer)
     {
         // 'B' means cancel the movie.
         if (pGamepad->wPressedButtons & XINPUT_GAMEPAD_B)
         {
             m_xmvPlayer->Stop(XMEDIA_STOP_IMMEDIATE);
-        }
-        
-        // 'Y' button to show message box during video playback
-        if (pGamepad->wPressedButtons & XINPUT_GAMEPAD_Y)
-        {
-            if (m_xmvPlayer)
-                m_xmvPlayer->Pause(); // Pause the video
-            
-            // Set flag to show black background and message box
-            m_bMessageBoxOpen = TRUE;
-            
-            // Show message box asynchronously only if not already showing
-            if (!g_bMessageBoxActive)
-            {
-                // Prepare message box text with console information
-                WCHAR dialog_text_buffer[512];
-                wsprintfW(dialog_text_buffer, L"HexPatch Exploit Successful\n\nConsole Information:\n\n%s\n%s\n%s", 
-                       wConTypeBuf, wCPUKeyBuf, wDVDKeyBuf);
-                
-                // Reset overlapped structure
-                ZeroMemory(&g_messageBoxOverlapped, sizeof(g_messageBoxOverlapped));
-                ZeroMemory(&g_messageBoxResult, sizeof(g_messageBoxResult));
-                
-                // Set the active flag
-                g_bMessageBoxActive = TRUE;
-                
-                // Show message box with 3 buttons
-                LPCWSTR thirdButtonText = IsSuccessVideoDisabled() ? L"Enable Success Video" : L"Disable Success Video";
-                LPCWSTR buttons[3] = { L"Return to Dashboard", L"Save Console Info", thirdButtonText };
-                HRESULT hr = XShowMessageBoxUI(0, L"HexPatch - Beta", dialog_text_buffer, 3, buttons, 0, XMB_WARNINGICON, &g_messageBoxResult, &g_messageBoxOverlapped);
-                if (hr == ERROR_IO_PENDING)
-                {
-                    cprintf("[HexPatch] Message box shown asynchronously\n");
-                }
-                else
-                {
-                    cprintf("[HexPatch] Failed to show message box: %#X\n", hr);
-                    g_bMessageBoxActive = FALSE;
-                    m_bMessageBoxOpen = FALSE;
-                }
-            }
         }
     }
     else
@@ -673,92 +465,42 @@ HRESULT HexPatch::Update()
             // Check if video is disabled
             if (!IsSuccessVideoDisabled())
             {
-                cprintf("[HexPatch] Video is not disabled, checking for custom path or embedded video\n");
-                
-                // Check if there's a custom video path in config
+                cprintf("[HexPatch] Video is not disabled, checking if file exists\n");
+                // Get the video path from config
                 CHAR videoPath[256];
-                BOOL hasCustomPath = GetCustomVideoPath(videoPath, sizeof(videoPath));
+                GetVideoPath(videoPath, sizeof(videoPath));
                 
-                if (hasCustomPath)
+                // Check if the video file exists before attempting to play it
+                HANDLE hFile = CreateFile(videoPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+                if (hFile != INVALID_HANDLE_VALUE)
                 {
-                    cprintf("[HexPatch] Custom video path found: %s\n", videoPath);
-                    // Check if the video file exists before attempting to play it
-                    HANDLE hFile = CreateFile(videoPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-                    if (hFile != INVALID_HANDLE_VALUE)
-                    {
-                        CloseHandle(hFile);
-                        cprintf("[HexPatch] Custom video file exists, attempting to create player\n");
-                        
-                        // Set the parameters to load the movie from a file on the game drive
-                        XmvParams.createType = XMEDIA_CREATE_FROM_FILE;
-                        XmvParams.createFromFile.szFileName = videoPath;
+                    CloseHandle(hFile);
+                    cprintf("[HexPatch] Video file exists, attempting to create player\n");
+                    
+                    // Set the parameters to load the movie from a file on the game drive
+                    XmvParams.createType = XMEDIA_CREATE_FROM_FILE;
+                    XmvParams.createFromFile.szFileName = videoPath;
 
-                        // Create from file instead of embedded resource
-                        HRESULT hr = XMedia2CreateXmvPlayer(m_pd3dDevice, m_pXAudio2, &XmvParams, &m_xmvPlayer);
-                        if (SUCCEEDED(hr))
-                        {
-                            cprintf("[HexPatch] Custom video player created successfully\n");
-                            InitVideoScreen();
-                            bVideoWasPlayed = TRUE; // Mark that video was played
-                        }
-                        else
-                        {
-                            cprintf("[HexPatch] Failed to create custom video player, hr: %#X\n", hr);
-                            m_bFailed = TRUE;
-                            m_bFinalFailed = TRUE; // Signal completion if video fails to load
-                        }
+                    // Create from file instead of embedded resource
+                    HRESULT hr = XMedia2CreateXmvPlayer(m_pd3dDevice, m_pXAudio2, &XmvParams, &m_xmvPlayer);
+                    if (SUCCEEDED(hr))
+                    {
+                        cprintf("[HexPatch] Video player created successfully\n");
+                        InitVideoScreen();
                     }
                     else
                     {
-                        cprintf("[HexPatch] Custom video file does not exist, falling back to embedded video\n");
-                        // Custom video file doesn't exist, fall back to embedded video
-                        goto PlayEmbeddedVideo;
+                        cprintf("[HexPatch] Failed to create video player, hr: %#X\n", hr);
+                        m_bFailed = TRUE;
+                        m_bFinalFailed = TRUE; // Signal completion if video fails to load
                     }
                 }
                 else
                 {
-                    cprintf("[HexPatch] No custom video path, playing embedded video\n");
-                    // No custom path specified, play embedded video
-                    PlayEmbeddedVideo:
-                    // Load embedded video resource using Xbox 360 method
-                    VOID* pSectionData;
-                    DWORD dwSectionSize;
-                    HMODULE hModule = GetModuleHandle(NULL);
-                    if (XGetModuleSection(hModule, "VID", &pSectionData, &dwSectionSize))
-                    {
-                        if (pSectionData && dwSectionSize > 0)
-                        {
-                            XmvParams.createType = XMEDIA_CREATE_FROM_MEMORY;
-                            XmvParams.createFromMemory.pvBuffer = (BYTE*)pSectionData;
-                            XmvParams.createFromMemory.dwBufferSize = dwSectionSize;
-
-                            HRESULT hr = XMedia2CreateXmvPlayer(m_pd3dDevice, m_pXAudio2, &XmvParams, &m_xmvPlayer);
-                            if (SUCCEEDED(hr))
-                            {
-                                cprintf("[HexPatch] Embedded video player created successfully\n");
-                                InitVideoScreen();
-                                bVideoWasPlayed = TRUE; // Mark that video was played
-                            }
-                            else
-                            {
-                                cprintf("[HexPatch] Failed to create embedded video player, hr: %#X\n", hr);
-                                m_bFailed = TRUE;
-                                m_bFinalFailed = TRUE; // Signal completion if video fails to load
-                            }
-                        }
-                        else
-                        {
-                            cprintf("[HexPatch] Failed to lock embedded video resource\n");
-                            m_bFailed = TRUE;
-                            m_bFinalFailed = TRUE;
-                        }
-                    }
-                    else
-                    {
-                        cprintf("[HexPatch] Failed to find embedded video resource\n");
-                        m_bFailed = TRUE;
-                        m_bFinalFailed = TRUE;
-                    }
+                    cprintf("[HexPatch] Video file does not exist, skipping video\n");
+                    // Video file doesn't exist, skip video and continue with normal flow
+                    m_bFailed = TRUE;
+                    m_bFinalFailed = TRUE; // Signal completion to skip video
                 }
             }
             else
@@ -767,16 +509,8 @@ HRESULT HexPatch::Update()
                 // Video is disabled, skip video and continue with normal flow
                 m_bFailed = TRUE;
                 m_bFinalFailed = TRUE; // Signal completion to skip video
-                bVideoWasPlayed = FALSE; // Mark that video was NOT played
             }
         }
-        
-        // Check if Y button is pressed to show message box when not playing video
-        if (pGamepad->wPressedButtons & XINPUT_GAMEPAD_Y)
-        {
-            m_bMessageBoxOpen = TRUE;
-        }
-        
         if (!DisableButtons)
         {
             if (pGamepad->wPressedButtons & XINPUT_GAMEPAD_BACK)
@@ -796,7 +530,7 @@ HRESULT HexPatch::Update()
 HRESULT HexPatch::Render()
 {
     // If we are currently playing a movie.
-    if (m_xmvPlayer && !m_bMessageBoxOpen)
+    if (m_xmvPlayer)
     {
         // If RenderNextFrame does not return S_OK then the frame was not
         // rendered (perhaps because it was cancelled) so a regular frame
@@ -833,7 +567,6 @@ HRESULT HexPatch::Render()
             // Signal that video has finished by setting a flag
             cprintf("[HexPatch] Video playback completed, setting final failed flag\\n");
             m_bFinalFailed = TRUE;
-            return S_FALSE; // Signal to exit the render loop
         }
 
     }
@@ -847,14 +580,13 @@ HRESULT HexPatch::Render()
         if (m_bShowMessageBox)
         {
             cprintf("[HexPatch] Showing message box after video completion\\n");
-            // Signal that we want to show the message box
+            // Show the message box
+            // Note: We can't directly call MessageBoxWithOptions here because it would block the render loop
+            // Instead, we need to handle this in the main function
             m_bShowMessageBox = FALSE; // Reset the flag
-            return S_FALSE; // Exit the render loop
-        }
-        else if (m_bMessageBoxOpen)
-        {
-            // Render a black background when message box is open
-            ATG::RenderBackground(0xFF000000, 0xFF000000);
+            
+            // For now, let's just show a notification
+            ShowNotify(L"Video completed, showing options...");
         }
     }
     // If m_bFailed is TRUE, we're skipping video, so don't render anything
@@ -927,19 +659,8 @@ VOID HexPatch::InitVideoScreen()
 // Name: Run()
 // Desc: Override the base Run method to handle video completion
 //--------------------------------------------------------------------------------------
-VOID HexPatch::Run()
+/*VOID HexPatch::Run()
 {
-    // Check if video is disabled before creating D3D device
-    if (IsSuccessVideoDisabled())
-    {
-        cprintf("[HexPatch] Video is disabled, skipping D3D device creation\n");
-        // Set flags to indicate video was not played
-        bVideoWasPlayed = FALSE;
-        m_bFailed = TRUE;
-        m_bFinalFailed = TRUE;
-        return;
-    }
-    
     HRESULT hr;
 
     // Create Direct3D
@@ -968,22 +689,37 @@ VOID HexPatch::Run()
     for (; ; )
     {
         // Update the scene
-        Update();
-
-        // Render the scene
-        HRESULT renderResult = Render();
+        HRESULT updateResult = Update();
         
         // Check if we should exit the loop (video finished)
-        if (renderResult == S_FALSE)
+        if (updateResult == E_ABORT)
         {
             break; // Exit the loop when video is finished
         }
+
+        // Render the scene
+        Render();
     }
     
-    cprintf("[HexPatch] Video loop exited, exiting application immediately\n");
-    // Exit immediately when video finishes, don't show any message box
-    XLaunchNewImage(XLAUNCH_KEYWORD_DEFAULT_APP, 0);
-}
+    cprintf("[HexPatch] Video loop exited, resetting D3D state\n");
+    
+    // Reset D3D state after video playback to ensure clean state for message box
+    if (m_pd3dDevice)
+    {
+        m_pd3dDevice->SetRenderState(D3DRS_ZENABLE, FALSE);
+        m_pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
+        // m_pd3dDevice->SetRenderState(D3DRS_FOGENABLE, FALSE); // Not a valid render state
+        m_pd3dDevice->SetVertexShader(0);
+        m_pd3dDevice->SetPixelShader(0);
+        m_pd3dDevice->SetVertexDeclaration(0);
+        
+        // Clear the frame buffer to ensure clean state
+        m_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET, 0xFF000000, 1.0f, 0);
+        m_pd3dDevice->Present(NULL, NULL, NULL, NULL);
+    }
+    
+    cprintf("[HexPatch] D3D state reset complete\n");
+}*/
 
 //--------------------------------------------------------------------------------------
 // Name: main()
@@ -1109,23 +845,40 @@ VOID __cdecl main()
     // Run the application until the video finishes
     cprintf("[HexPatch] Starting video playback loop\n");
     atgApp.Run();
-    cprintf("[HexPatch] Video playback loop finished\n");
+    cprintf("[HexPatch] Video playback loop finished, showing message box\n");
     
-    // Only show message box prompt if video was not played (disabled/skipped)
-    if (!bVideoWasPlayed)
-    {
-        // After video finishes, show the existing message box functionality
-        // --------------------------------------------------------------
-        // Name: SMBUI MAIN CLASS
-        // Desc: Shows the notification on exploitation success and 
-        //       the SMBUI if enabled
-        // --------------------------------------------------------------
+    // After video finishes, show the existing message box functionality
+    // --------------------------------------------------------------
+    // Name: SMBUI MAIN CLASS
+    // Desc: Shows the notification on exploitation success and 
+    //       the SMBUI if enabled
+    // --------------------------------------------------------------
 
+
+    if (!IsMessageBoxDisabled())
+    {
+        cprintf("[HexPatch] Showing success notification\n");
+        ShowNotify(L"Exploit Successful");
+    }
+    else
+    {
         cprintf("[HexPatch] Showing success notification with Y button prompt\n");
         ShowNotify(L"Exploit Successful: Press Y to show options");
+    }
 
-        // Always give user a 5 second window to press Y to show the message box
-        // User can enable message boxes by pressing Y even when they're disabled
+    // If message box is enabled, show it immediately
+    if (!IsMessageBoxDisabled())
+    {
+        cprintf("[HexPatch] Showing message box immediately\n");
+        wsprintfW(dialog_text_buffer, L"DO NOT SIGN IN TO THE \"BadAvatar\" PROFILE\n\nConsole Information:\n\n%s\n%s\n%s", 
+                  wConTypeBuf, wCPUKeyBuf, wDVDKeyBuf);
+        MessageBoxWithOptions(dialog_text_buffer);
+    }
+    else
+    {
+        cprintf("[HexPatch] Message box disabled, waiting for Y button press\n");
+        // If message boxes are disabled, give user a 5 second window to press Y to show the message box
+        // User must manually edit config file to re-enable message boxes
         DWORD startTime = GetTickCount();
         DWORD elapsedTime = 0;
         const DWORD waitTime = 5000; // 5 seconds in milliseconds
@@ -1145,12 +898,10 @@ VOID __cdecl main()
                     {
                         cprintf("[HexPatch] Y button pressed, showing message box\n");
                         // Y button pressed, show the message box
-                        wsprintfW(dialog_text_buffer, L"HexPatch Exploit Successful\n\nConsole Information:\n\n%s\n%s\n%s", 
+                        wsprintfW(dialog_text_buffer, L"DO NOT SIGN IN TO THE \"BadAvatar\" PROFILE\n\nConsole Information:\n\n%s\n%s\n%s", 
                                wConTypeBuf, wCPUKeyBuf, wDVDKeyBuf);
                         MessageBoxWithOptions(dialog_text_buffer);
-                        // Exit to dashboard after message box
-                        XLaunchNewImage(XLAUNCH_KEYWORD_DEFAULT_APP, 0);
-                        return; // Exit the function
+                        break; // Exit the loop and continue normal flow
                     }
 
                     buttonFinished = true;
@@ -1172,12 +923,4 @@ VOID __cdecl main()
         // If we reached here without showing the message box, exit to dashboard
         XLaunchNewImage(XLAUNCH_KEYWORD_DEFAULT_APP, 0);
     }
-    else
-    {
-        // Video was played, exit immediately
-        cprintf("[HexPatch] Video was played, exiting immediately\n");
-        XLaunchNewImage(XLAUNCH_KEYWORD_DEFAULT_APP, 0);
-    }
-
-
 }
