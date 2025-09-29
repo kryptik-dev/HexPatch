@@ -1,6 +1,13 @@
 # HexPatch - Beta
 A XeUnshackle Alternative with a ```SMBUI```_(Simple Message Box UI)_ made specifically for [ABadAvatar](https://github.com/shutterbug2000/ABadAvatar)
 
+> [!CAUTION]
+> * **BACKUP YOUR NAND!** This should be the first thing you do.
+> * **DO NOT FLASH MODIFIED NAND IMAGES!** You will **brick** your console.
+> * **DO NOT REPLACE FILES IN FLASH!** This includes things like replacing the bootanim.
+> * Avoid using homebrew or plugins that make changes to FLASH (the nand).
+> * Read the **README - IMPORTANT.txt** in the release files for important notes regarding the use of Stealth Servers.
+
 1. Loads `DashLaunch` As **Normal**.
 
 2.  Option to skip the UI and take you straight to the Xbox 360 Dashboard.<br>
