@@ -370,7 +370,7 @@ void MessageBoxWithOptions(LPCWSTR message)
                     XLaunchNewImage(XLAUNCH_KEYWORD_DEFAULT_APP, 0);
                     return;
                 }
-                Sleep(100); // Short sleep to avoid hammering the CPU
+                Sleep(50); // Short sleep to avoid hammering the CPU
                 continue;
             }
         }
@@ -386,7 +386,7 @@ void MessageBoxWithOptions(LPCWSTR message)
                 XLaunchNewImage(XLAUNCH_KEYWORD_DEFAULT_APP, 0);
                 return;
             }
-            Sleep(100); // Short sleep to avoid hammering the CPU
+            Sleep(50); // Short sleep to avoid hammering the CPU
             continue;
         }
     }
