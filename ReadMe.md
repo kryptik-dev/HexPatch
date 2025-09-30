@@ -1,5 +1,5 @@
 # HexPatch - Beta
-A XeUnshackle Derivative with a ```SMBUI```_(Simple Message Box UI)_ made specifically for [ABadAvatar](https://github.com/shutterbug2000/ABadAvatar)
+A XeUnshackle Derivative with a ```SMBUI```_(Simple Message Box UI)_ in place of the blue screen GUI
 
 > [!IMPORTANT]
 >* **THERE WILL BE NO FURTHER UPDATES AFTER V1.4**
