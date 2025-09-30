@@ -1,5 +1,9 @@
 # HexPatch - Beta
-A XeUnshackle Alternative with a ```SMBUI```_(Simple Message Box UI)_ made specifically for [ABadAvatar](https://github.com/shutterbug2000/ABadAvatar)
+A XeUnshackle Derivative with a ```SMBUI```_(Simple Message Box UI)_ made specifically for [ABadAvatar](https://github.com/shutterbug2000/ABadAvatar)
+
+> [!IMPORTANT]
+>* **THERE WILL BE NO FURTHER UPDATES AFTER V1.4**
+>* **THIS PROJECT HAS BEEN SHUTDOWN**
 
 > [!CAUTION]
 > * **BACKUP YOUR NAND!** This should be the first thing you do.
@@ -27,5 +31,4 @@ _**Note: this disables UI permanently, unless the 'config.ini' file is deleted o
 
 </details>
 
-> MIT License
-> Copyright (c) 2025 Kryptal, Kryptik-Dev, and Safauri
+All credits go to (XeUnshackle)[https://github.com/Byrom90/XeUnshackle/]
