@@ -31,4 +31,4 @@ _**Note: this disables UI permanently, unless the 'config.ini' file is deleted o
 
 </details>
 
-All credits go to (XeUnshackle)[https://github.com/Byrom90/XeUnshackle/]
+All credits go to [XeUnshackle](https://github.com/Byrom90/XeUnshackle/)
