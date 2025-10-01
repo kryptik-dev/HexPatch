@@ -11,6 +11,28 @@
 // A SIMPLE SET AND FORGET USER EXPERIENCE.
 //--------------------------------------------------------------------------------------
 
+// XeUnshackle Credits:
+//==========================================================================================================================
+//
+//											- XeUnshackle BETA -
+//			A simple app designed to apply a full set of freeboot/xebuild kernel & HV patches to a running system
+//			after running the Xbox360BadUpdate HV exploit. Sets up & loads a version of launch.xex (Dashlaunch)
+//          designed to run from hdd or usb root rather than flash (nand).
+//
+// Created by: Byrom
+// 
+// Credits: 
+//          grimdoomer - Xbox360BadUpdate exploit.
+//          cOz - Dashlaunch, xeBuild patches and much more.
+//          Visual Studio / GoobyCorp
+//          Diamond
+//          InvoxiPlayGames - FreeMyXe, Usbdsec patches, RoL restore and general help.
+//          Jeff Hamm - https://www.youtube.com/watch?v=PantVXVEVUg - Chain break video
+//          ikari - freeBOOT
+//          Xbox360Hub Discord #coding-corner
+//          Anyone else who has contributed anything to the 360 scene. Apologies if any credits were missed.
+//===========================================================================================================================
+
 
 #include "stdafx.h"
 
