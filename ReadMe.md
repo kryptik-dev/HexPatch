@@ -10,7 +10,6 @@ A XeUnshackle Derivative with a ```SMBUI```_(Simple Message Box UI)_ in place of
 > * **DO NOT FLASH MODIFIED NAND IMAGES!** You will **brick** your console.
 > * **DO NOT REPLACE FILES IN FLASH!** This includes things like replacing the bootanim.
 > * Avoid using homebrew or plugins that make changes to FLASH (the nand).
-> * Read the **README - IMPORTANT.txt** in the release files for important notes regarding the use of Stealth Servers.
 
 1. Loads `DashLaunch` As **Normal**.
 
